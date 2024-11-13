@@ -1,0 +1,24 @@
+CREATE TABLE areas (
+    radius INT,
+    area DECIMAL(10, 2)
+);
+
+DELIMITER //
+
+CREATE PROCEDURE calculate_area()
+BEGIN
+    DECLARE radius INT DEFAULT 5;
+    DECLARE area DECIMAL(10, 2);
+    DECLARE pi DECIMAL(10, 5) DEFAULT 3.14159;
+
+    WHILE radius <= 9 DO
+        SET area = pi * radius * radius;
+        INSERT INTO areas (radius, area) VALUES (radius, area);
+        SET radius = radius + 1;
+    END WHILE;
+END //
+
+DELIMITER ;
+
+CALL calculate_area();
+SELECT * FROM areas;

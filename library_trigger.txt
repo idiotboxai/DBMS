@@ -1,0 +1,44 @@
+DELIMITER //
+CREATE TABLE Books (
+    BookID INT PRIMARY KEY,
+    Title VARCHAR(100),
+    Author VARCHAR(100)
+);
+
+INSERT INTO Books (BookID, Title, Author) VALUES
+    (1, '1984', 'George Orwell'),
+    (2, 'Pride and Prejudice', 'Jane Austen');
+
+CREATE TABLE AuditLog (
+    AuditID INT AUTO_INCREMENT PRIMARY KEY,
+    BookID INT,
+    ActionType VARCHAR(10),
+    OldTitle VARCHAR(100),
+    OldAuthor VARCHAR(100),
+    ActionTimestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER after_books_update
+AFTER UPDATE ON Books
+FOR EACH ROW
+BEGIN
+    INSERT INTO AuditLog (BookID, ActionType, OldTitle, OldAuthor)
+    VALUES (OLD.BookID, 'UPDATE', OLD.Title, OLD.Author);
+END;
+//
+
+CREATE TRIGGER after_books_delete
+AFTER DELETE ON Books
+FOR EACH ROW
+BEGIN
+    INSERT INTO AuditLog (BookID, ActionType, OldTitle, OldAuthor)
+    VALUES (OLD.BookID, 'DELETE', OLD.Title, OLD.Author);
+END;
+//
+
+DELIMITER ;
+UPDATE Books SET Author = 'Anonymous' WHERE BookID = 1;
+DELETE FROM Books WHERE BookID = 2;
+
+SELECT * FROM Books;
+SELECT * FROM AuditLog;
