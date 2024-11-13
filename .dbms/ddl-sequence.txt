@@ -1,0 +1,47 @@
+CREATE DATABASE school;
+
+USE school;
+
+CREATE TABLE Student (
+    RollNumber INT PRIMARY KEY,
+    Name VARCHAR(50) NOT NULL,
+    City VARCHAR(50),
+    Age INT CHECK (Age >= 18),
+    UNIQUE (City)
+);
+
+CREATE TABLE Teacher (
+    TeacherID INT PRIMARY KEY,
+    Name VARCHAR(50) NOT NULL,
+    Subject VARCHAR(50),
+    StudentID INT,
+    FOREIGN KEY (StudentID) REFERENCES Student(RollNumber)
+);
+
+INSERT INTO Student (RollNumber, Name, City, Age) VALUES
+    (1, 'Alice', 'New York', 20),
+    (2, 'Bob', 'Los Angeles', 22),
+    (3, 'Charlie', 'New York', 19),
+    (4, 'David', 'Chicago', 21),
+    (5, 'Eva', 'New York', 18);
+
+INSERT INTO Teacher (TeacherID, Name, Subject, StudentID) VALUES
+    (1, 'Mr. Smith', 'Math', 1),
+    (2, 'Ms. Johnson', 'Science', 2),
+    (3, 'Mr. Williams', 'English', 3);
+
+CREATE INDEX idx_student_name ON Student (Name);
+
+CREATE SEQUENCE roll_number_seq
+    START WITH 6
+    INCREMENT BY 1;
+
+CREATE VIEW StudentView AS
+    SELECT RollNumber, Name, City FROM Student;
+
+CREATE VIEW TeacherView AS
+    SELECT TeacherID, Name, Subject FROM Teacher;
+
+SELECT * FROM StudentView;
+
+SELECT * FROM TeacherView;
