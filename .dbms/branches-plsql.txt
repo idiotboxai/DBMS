@@ -1,3 +1,6 @@
+CREATE DATABASE soka;
+USE soka;
+
 CREATE TABLE NEW_BRANCHES (
     branch_id INT PRIMARY KEY,
     branch_name VARCHAR(100),
@@ -10,66 +13,28 @@ CREATE TABLE BRANCH_MSTR (
     branch_location VARCHAR(100)
 );
 
-INSERT INTO NEW_BRANCHES (branch_id, branch_name, branch_location)
-VALUES (1, 'Branch A', 'Location A');
-INSERT INTO NEW_BRANCHES (branch_id, branch_name, branch_location)
-VALUES (2, 'Branch B', 'Location B');
-INSERT INTO NEW_BRANCHES (branch_id, branch_name, branch_location)
-VALUES (3, 'Branch C', 'Location C');
-INSERT INTO NEW_BRANCHES (branch_id, branch_name, branch_location)
-VALUES (4, 'Branch D', 'Location D');
+INSERT INTO NEW_BRANCHES (branch_id, branch_name, branch_location) VALUES
+    (1, 'Branch A', 'Location A'),
+    (2, 'Branch B', 'Location B'),
+    (3, 'Branch C', 'Location C'),
+    (4, 'Branch D', 'Location D');
 
-INSERT INTO BRANCH_MSTR (branch_id, branch_name, branch_location)
-VALUES (1, 'Branch A', 'Location A');
-INSERT INTO BRANCH_MSTR (branch_id, branch_name, branch_location)
-VALUES (2, 'Branch B', 'Location B');
+INSERT INTO BRANCH_MSTR (branch_id, branch_name, branch_location) VALUES
+    (1, 'Branch A', 'Location A'),
+    (2, 'Branch B', 'Location B');
 
 DELIMITER //
 
-CREATE PROCEDURE calculate_area()
+CREATE PROCEDURE merge_new_branches()
 BEGIN
-    DECLARE radius INT DEFAULT 5;
-    DECLARE area DECIMAL(10, 2);
-    DECLARE pi DECIMAL(10, 5) DEFAULT 3.14159;
-
-    WHILE radius <= 9 DO
-        SET area = pi * radius * radius;
-        INSERT INTO areas (radius, area) VALUES (radius, area);
-        SET radius = radius + 1;
-    END WHILE;
+    INSERT INTO BRANCH_MSTR (branch_id, branch_name, branch_location)
+    SELECT branch_id, branch_name, branch_location
+    FROM NEW_BRANCHES
+    WHERE branch_id NOT IN (SELECT branch_id FROM BRANCH_MSTR);
 END //
 
 DELIMITER ;
 
-CALL calculate_area();
-
-DELIMITER //
-
-DECLARE
-    CURSOR new_branches_cursor IS
-        SELECT branch_id, branch_name, branch_location FROM NEW_BRANCHES;
-    v_branch_id NEW_BRANCHES.branch_id%TYPE;
-    v_branch_name NEW_BRANCHES.branch_name%TYPE;
-    v_branch_location NEW_BRANCHES.branch_location%TYPE;
-BEGIN
-    FOR branch_rec IN new_branches_cursor LOOP
-        v_branch_id := branch_rec.branch_id;
-        v_branch_name := branch_rec.branch_name;
-        v_branch_location := branch_rec.branch_location;
-
-        BEGIN
-            INSERT INTO BRANCH_MSTR (branch_id, branch_name, branch_location)
-            SELECT v_branch_id, v_branch_name, v_branch_location
-            FROM dual
-            WHERE NOT EXISTS (
-                SELECT 1 FROM BRANCH_MSTR WHERE branch_id = v_branch_id
-            );
-        EXCEPTION
-            WHEN DUP_VAL_ON_INDEX THEN
-                NULL;
-        END;
-    END LOOP;
-END //
-DELIMITER ;
+CALL merge_new_branches();
 
 SELECT * FROM BRANCH_MSTR;
