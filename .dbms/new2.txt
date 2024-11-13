@@ -1,0 +1,258 @@
+Q 3. Solution:
+1.How the resulting salaries if every employee working on the ‘Research’
+Departments is given a 10 percent raise.
+SELECT E.FNAME,E.LNAME, 1.1*E.SALARY AS INCR_SAL
+FROM EMPLOYEE1 E,DEPARTMENT D,EMPLOYEE1 W
+WHERE E.SSN=W.SSN
+AND E.DNO=D.DNUMBER
+AND D.DNAME='research'; 
+
+2.Find the sum of the salaries of all employees of the ‘Accounts’ department, as well
+as the maximum salary, the minimum salary, and the average salary in this
+department.
+SELECT SUM(E.SALARY),MAX(E.SALARY),MIN(E.SALARY),
+AVG(E.SALARY)FROM EMPLOYEE1 E,DEPARTMENT D WHERE
+E.DNO=D.DNUMBER AND D.DNAME='RESEARCH';
+3. Retrieve the name of each employee Controlled by department number 5 (use
+EXISTS operator).
+SELECT E.FNAME,E.LNAME
+FROM EMPLOYEE1 E
+WHERE EXISTS(SELECT DNO FROM EMPLOYEE1 WHERE E.DNO=5);
+
+4. Retrieve the name of each dept and number of employees working in each
+department which has at least 2 employees
+SELECT DNAME, COUNT(*)
+FROM EMPLOYEE E, DEPARTMENT D
+WHERE D.DNO=E.DNO
+AND D.DNO IN (SELECT E1.DNO
+FROM EMPLOYEE E1
+GROUP BY E1.DNO
+having count(*)>2 )
+ORDER BY DNO;
+
+5. Retrieve the name of employees who born in the year 1990’s
+SELECT E.FNAME,E.LNAME,E.BDATE FROM EMPLOYEE1 E WHERE BDATE LIKE
+'196%';
+6.Retrieve the name of employees and their dept name (using JOIN)
+SELECT E.FNAME, E.LNAME, DNAME
+FROM EMPLOYEE E NATURAL JOIN DEPARTMENT D ON E,DNO=D.DNO;
+
+Q 4. 1. CREATE TABLE EMPLOYEE (
+SSN VARCHAR2 (20) PRIMARY KEY,
+FNAME VARCHAR2 (20),
+LNAME VARCHAR2 (20),
+ADDRESS VARCHAR2 (20),
+SEX CHAR (1),
+SALARY INTEGER,
+SUPERSSN REFERENCES EMPLOYEE (SSN),
+DNO REFERENCES DEPARTMENT (DNO));
+2. DESC EMPLOYEE;
+3. NSERT INTO EMPLOYEE (SSN, FNAME, LNAME, ADDRESS, SEX, SALARY)
+VALUES (‘RNSECE01‘,‘JOHN‘,‘SCOTT‘,‘BANGALORE‘,‘M‘, 450000);
+INSERT INTO EMPLOYEE (SSN, FNAME, LNAME, ADDRESS, SEX, SALARY)
+VALUES (‘RNSCSE01‘,‘JAMES‘,‘SMITH‘,‘BANGALORE‘,‘M‘, 500000);
+4. Creating View
+The query that defines the sales_staffview references only rows in department 5.
+Furthermore, the CHECK OPTION creates the view with the constraint (named
+sales_staff_cnst) that INSERT and UPDATE statements issued against the view cannot
+result in rows that the view cannot select.
+1. Creating Views (With and Without Check Option)
+SQL> CREATE VIEW sales_staff AS
+SELECT fname, ssn, dno
+FROM employee
+WHERE dno =5
+WITH CHECK OPTION CONSTRAINT sales_staff_cnst;
+View created.
+2. Selecting from a View
+SQL> select * from sales_staff;
+3. Drop View
+SQL>DROP VIEW sales_staff;
+
+Refer table as above given :
+
+Q 5. i) SELECT NAME,PRICE FROM ACCESSORIES ORDER BY PRICE DESC;
+(ii) SELECT ID,SNAME FROM SHOPPE WHERE AREA='NEHRU PLACE';
+
+(iii) SELECT NAME,MIN(PRICE),MAX(PRICE) FROM ACCESSORIES GROUP BY NAME;
+(iv) SELECT NAME,PRICE,SNAME FROM SHOPPE S, ACCESSORIES A WHERE
+S.ID=A.ID AND PRICE>=5000;
+(v) SELECT * FROM ACCESSORIES WHERE NAME LIKE „%BOARD%‟;
+vi) NAME
+-----------
+Mother Board
+LCD
+(vii) AREA COUNT(*)
+-------------------------------
+CP 2
+GK II 1
+Nehru Place 2
+(viii) AVG(PRICE) MAX(PRICE)
+-------------------------------------
+12500 13000
+(ix) NAME DISCOUNT
+-----------------------------------
+Keyboard 25
+Mother Board 650
+Keyboard 20
+Hard Disk 225
+
+(x) ID SNAME AREA NO NAME PRICE ID
+-------------------------------------------------------------------------------------------------------
+S01 ABC Computronics CP A01 Mother board 12000 S01
+S02 All Infotech media GK II A05 Mother board 13000 S02
+
+Q 6.
+(i) SELECT * FROM TRAINS WHERE START='NEW DELHI';
+(ii) SELECT PNR,PNAME,GENDER,AGE FROM PASSENGER WHERE AGE<50;
+(iii) SELECT GENDER,COUNT(*) FROM PASSENGERS GROUP BY GENDER;
+(iv) SELECT * FROM PASSENGERS WHERE TNO=12015;
+(v) MAX(TRAVELDATE) MIN(TRAVELDATE)
+----------------------------------------------------------
+2018-11-10 2018-05-09
+(vi) END COUNT(*)
+-------------------------------------------
+HABIBGANJ 2
+AMRITSAR JUNCTION 2
+NEW DELHI 4
+(vii) TRAVELDATE
+
+-------------------
+2018-12-25
+2018-11-10
+2018-10-12
+2018-05-09
+(viii) TNAME PNAME
+----------------------------------------------------------------------
+AJMER SHATABDI P TIWARY
+AJMER SHATABDI S TIWARY
+AMRITSAR MAIL R N AGRAWAL
+AMRITSAR MAIL N S SINGH
+SWARNA SHATABDI S K SAXENA
+SWARNA SHATABDI S SAXENA
+SWARNA SHATABDI J K SHARMA
+SWARNA SHATABDI R SHARMA
+
+Q 7. (i) SELECT * FROM EMPLOYEE ORDER BY DOJ DESC;
+(ii) SELECT NAME,DESIG FROM EMPLOYEE WHERE SGRADE IN ('S02','S03')
+OR
+SELECT NAME,DESIG FROM EMPLOYEE WHERE SGRADE='S02' OR
+SGRADE='S03';
+(iii) SELECT NAME,DESIG,SGRADE FROM EMPLOYEE WHERE DOJ LIKE '2009%';
+(iv) SELECT SGRADE,SALARY*12 ANNUAL_SALARY FROM SALGRADE;
+(v) SELECT SGRADE,COUNT(*) FROM EMPLOYEE GROUP BY SGRADE;
+(vi) SELECT NAME,DESIG,SALARY,HRA FROM EMPLOYEE E,SALGRADE S WHERE
+E.SGRADE=S.SGRADE AND SALARY<=50000;
+(vii) MIN(DOJ) MAX(DOB)
+------------------------------------
+2003-03-23 1987-07-22
+(viii) SGRADE SALARY+HRA
+---------------------------------
+S02 44000
+(ix) COUNT(*)
+---------------
+3
+(x) SUM(SALARY) AVG(SALARY)
+--------------------------------------------
+112000 37333.33
+
+Q 8.
+Select * from TRANSACT where TYPE=’Withdraw’;
+(ii) Select ANO, AMOUNT from TRANSACT where DOT like ‘%-05-%’;
+(iii) Select MIN(DOT) from TRANSACT where ANO=102;
+
+(iv) Select ANO,T.ANO,ANAME,AMOUNT from ACCOUNT A, TRANSACT T where A.ANO =
+T.ANO andAMOUNT<=3000;
+(v)ANO ANAME
+-------------------------------------
+103 Ali Reza
+105 Simran Kaur
+(vi)
+ANO
+----------
+101
+103
+102
+
+Q 9.
+i) select ename from employee where ename like 'V%' order by salary;
+(ii) Select * from employee where dept='Sales' and salary>20000;
+(iii) select count(distinct dept) from employee;
+(iv) update employee set salary=20000 where ename='NITIN';
+(v) insert into employee values(6,'SUMIT','HR',40000,2000)
+(vi) 1980 (including record inserted in (v))
+vii) ENAME DEPT
+--------------------------
+ANKIT
+HR
+SUJEET
+ACCOUNTS
+VIJAY
+HR
+(viii) ENAME NEWSAL
+----------------------------------
+ANKIT
+20100
+SUJEET
+24100
+VIJAY
+28100
+NITIN
+20100
+VIKRAM
+22100
+SUMIT
+40100
+Q 11. 1. create table employee (empno number,
+ename varchar(10),
+job varchar(10),
+mgr number,
+sal number);
+1. Add a column commission with domain to the Employee table.
+
+SQL> alter table employee add(commission number);
+Table altered.
+2. Insert any five records into the table.
+insert into Employee values(101,'abhi','manager',1234,10000,'70');
+insert into employee values(102,'rohith','analyst',2345,9000,'65');
+insert into employee values(103,'david','analyst',3456,9000,'65');
+insert into employee values(104,'rahul','clerk',4567,7000,'55');
+insert into employee values(105,'pramod','salesman',5678,5000,'50');
+3. Update the column details of job
+SQL> update employee set job='trainee' where empno=103;
+4. Rename the column of Employee table using alter command.
+SQL> alter table employee rename column mgr to manager_no;
+Table altered.
+SQL>desc employee;
+5. Delete the employee whose Empno is 105
+SQL> delete employee where empno=105;
+1 row deleted
+SQL> select * from Employee;
+
+Q 12.
+1. Create Employee table containing all Records E_id, E_name, Age, Salary.
+SQL> create table employee (E_id number,
+E_name varchar(10),
+age number,
+sal number);
+Table created.
+SQL>desc Employee;
+2. Count number of employee names from employee table
+Insert any five records into Employee table
+insert into Employee values(10,'abhi',25 ,10000);
+insert into employee values(20,'rohith',30,9000);
+insert into employee values(30,'david',28,9000);
+insert into employee values(40,'rahul',29,7000);
+insert into employee values(50,'pramod',31,8000);
+SQL>select * from employee;
+SQL> select count(E_name) from Employee;
+
+3.Find the Maximum age from employee table.
+SQL>select max(age) from Employee;
+4. Find the Minimum age from employee table
+
+SQL>select min(age) from Employee;
+
+5. Find salaries of employee in Ascending Order.
+SQL> SELECT * FROM Students ORDER BY salary ASC;
+6. Find grouped salaries of employees.
+SQL> select salary from employee group by salary;
