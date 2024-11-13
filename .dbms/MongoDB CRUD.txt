@@ -1,30 +1,19 @@
-show dbs
-use book
-show collections;
-db.createCollection("library");
-db.library.insert({"bid":1,"name":"C++"});
-db.library.insert({"bid":2,"name":"sls","author":"aba"});
-db.library.insert({"bid":3,"name":"CN","author":"xyz","cost":700});
-db.library.find().pretty();
-db.library.remove({"bid":1});
-db.library.count();
-db.library.find().pretty();
-db.library.insert({"bid":1,"name":"C++"});
-db.library.find().pretty();
-db.library.find().sort({"bid":1})
-db.library.insert({"bid":4,"name":"SPOS","author":"goku","cost":500});
-db.library.find().pretty();
-db.library.find().sort({"bid":1})
-db.library.find({$and:[{"name":"CN"},{"cost":700}]}).pretty()
-db.library.insert({"bid":5,"name":"TOC","author":"we","cost":600});
-db.library.insert({"bid":6,"name":"AI","author":"mw Hill","cost":800});
-db.library.find().pretty();
-db.library.find({$or:[{"cost":500},{"cost":800}]}).pretty()
-db.library.find({"cost":{$ne:500}})
-db.library.find({$nor:[{"cost":500},{"author":"sls"}]})
-db.library.find({"cost":{$not:{$gt:800}}})
-db.library.insert({"bid":7,"name":"CC","author":"W Publications","cost":400})
-db.library.find()
-db.library.update({'cost':400},{$set:{'cost':600}})
-db.library.update({'cost':800},{$set:{'cost':1200}})
-db.library.find().pretty();
+db.users.insertOne({ name: "Alice", age: 28, status: "active", tags: ["user", "premium"] });
+db.users.insertMany([
+    { name: "Bob", age: 34, status: "inactive", tags: ["admin", "standard"] },
+    { name: "Charlie", age: 25, status: "active", tags: ["user", "standard"] }
+]);
+db.users.find({ age: { $gte: 30 } });
+db.users.find({ $and: [{ status: "active" }, { tags: { $in: ["premium"] } }] });
+db.users.findOne({ name: "Alice" });
+db.users.updateOne({ name: "Alice" }, { $set: { age: 29 } });
+db.users.updateMany({ status: "inactive" }, { $set: { status: "archived" } });
+db.users.save({ _id: ObjectId("user_id"), name: "Alice", age: 30, status: "active" });
+db.users.deleteOne({ name: "Charlie" });
+db.users.deleteMany({ status: "archived" });
+db.users.aggregate([
+    { $match: { status: "active" } },
+    { $group: { _id: "$status", averageAge: { $avg: "$age" }, totalUsers: { $sum: 1 } } }
+]);
+db.users.find({ $or: [{ age: { $lt: 30 } }, { status: "active" }] });
+db.users.find({ tags: { $all: ["user", "premium"] } });
