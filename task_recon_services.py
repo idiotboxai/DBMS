@@ -5,11 +5,100 @@ import json
 import requests
 from urllib.parse import urlparse
 from ai_core import AICore, perform_web_search, ask_ollama
-from config import NMAP_PORTS, GITHUB_API_TOKEN
+from config import NMAP_PORTS, GITHUB_API_TOKEN, NAABU_ENABLED, NAABU_TOP_PORTS, NAABU_RATE, NAABU_TIMEOUT
 from git_analyzer import clone_and_analyze_repo
 import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def _resolve_final_url(host, port, use_https=False):
+    """
+    Resolve final URL with redirect handling.
+    
+    Args:
+        host: Target host
+        port: Port number
+        use_https: Whether to use HTTPS
+        
+    Returns:
+        Final URL after redirects or None
+    """
+    scheme = 'https' if use_https else 'http'
+    url = f"{scheme}://{host}:{port}/" if port not in [80, 443] else f"{scheme}://{host}/"
+    
+    try:
+        response = requests.get(
+            url,
+            timeout=10,
+            allow_redirects=True,
+            verify=False,
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        )
+        
+        final_url = response.url
+        
+        if response.status_code == 200:
+            print(f"[URL_RESOLVE] {url} → {final_url} (200 OK)")
+            return final_url
+        else:
+            print(f"[URL_RESOLVE] {url} → {final_url} ({response.status_code})")
+            return final_url
+            
+    except Exception as e:
+        print(f"[URL_RESOLVE] {url} failed: {str(e)[:50]}")
+        return None
+
+
+def _run_naabu_scan(host):
+    """
+    Run Naabu for fast port discovery.
+    
+    Args:
+        host: Target host
+        
+    Returns:
+        List of open ports or None if failed
+    """
+    if not NAABU_ENABLED:
+        return None
+        
+    print(f"[NAABU] Fast port scanning {host}...")
+    
+    try:
+        command = [
+            'naabu',
+            '-host', host,
+            '-top-ports', str(NAABU_TOP_PORTS),
+            '-rate', str(NAABU_RATE),
+            '-timeout', str(NAABU_TIMEOUT),
+            '-silent',
+            '-json'
+        ]
+        
+        result = AICore.run_command(command, timeout=120)
+        
+        if not result:
+            print("[NAABU] ❌ Scan failed")
+            return None
+            
+        # Parse JSON output
+        ports = []
+        for line in result.splitlines():
+            try:
+                data = json.loads(line)
+                port = data.get('port')
+                if port:
+                    ports.append(port)
+            except json.JSONDecodeError:
+                continue
+                
+        print(f"[NAABU] ✅ Found {len(ports)} open ports")
+        return ports
+        
+    except Exception as e:
+        print(f"[NAABU] ❌ Error: {str(e)}")
+        return None
+
 
 def _filter_critical_cves(cve_list, max_cves=5):
     """
@@ -214,10 +303,23 @@ def execute_service_recon_and_vuln_scan(target, simulator_mode=False):
     print(f"Target: {host}")
     print(f"{'='*80}\n")
     
-    # Step 1: Nmap Scan
-    nmap_command = ['nmap', '-sT', '-sV', '--open', '--script', 'vulners', '-p', NMAP_PORTS, host]
+    # Step 1: Fast port discovery with Naabu (if enabled)
+    naabu_ports = _run_naabu_scan(host)
+    
+    # Determine ports to scan
+    if naabu_ports:
+        # Use Naabu results for targeted Nmap scan
+        ports_to_scan = ','.join(map(str, naabu_ports[:100]))  # Limit to 100 ports
+        print(f"[NMAP] Targeting {len(naabu_ports)} ports discovered by Naabu")
+    else:
+        # Fall back to default ports
+        ports_to_scan = NMAP_PORTS
+        print(f"[NMAP] Using default port list")
+    
+    # Step 2: Nmap Scan with service detection
+    nmap_command = ['nmap', '-sT', '-sV', '--open', '--script', 'vulners', '-p', ports_to_scan, host]
     print(f"[NMAP] Scanning ports...")
-    nmap_output = AICore.run_command(nmap_command)
+    nmap_output = AICore.run_command(nmap_command, timeout=600)
     
     if not nmap_output:
         print("[NMAP] ❌ Scan failed")
