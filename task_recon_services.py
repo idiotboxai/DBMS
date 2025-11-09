@@ -9,7 +9,46 @@ from config import NMAP_PORTS, GITHUB_API_TOKEN
 from git_analyzer import clone_and_analyze_repo
 import shutil
 import time
+import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def _run_naabu(target, top_ports=1000, rate=1000):
+    """
+    Run Naabu for fast initial port discovery.
+    Returns list of open ports.
+    """
+    try:
+        command = ['naabu', '-host', target, '-top-ports', str(top_ports), '-rate', str(rate), '-silent', '-json']
+        result = subprocess.run(command, capture_output=True, text=True, timeout=120)
+        if result.returncode != 0:
+            return []
+        ports = []
+        for line in result.stdout.splitlines():
+            try:
+                data = json.loads(line)
+                if 'port' in data:
+                    ports.append(str(data['port']))
+            except json.JSONDecodeError:
+                continue
+        return ports
+    except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
+        return []
+
+def _get_final_url(url, timeout=10):
+    """
+    Follow redirects and get final URL.
+    Returns tuple: (final_url, redirect_chain)
+    """
+    try:
+        session = requests.Session()
+        session.max_redirects = 10
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = session.get(url, headers=headers, timeout=timeout, allow_redirects=True)
+        redirect_chain = [resp.url for resp in response.history]
+        redirect_chain.append(response.url)
+        return response.url, redirect_chain
+    except Exception:
+        return url, [url]
 
 def _filter_critical_cves(cve_list, max_cves=5):
     """
@@ -214,9 +253,20 @@ def execute_service_recon_and_vuln_scan(target, simulator_mode=False):
     print(f"Target: {host}")
     print(f"{'='*80}\n")
     
-    # Step 1: Nmap Scan
-    nmap_command = ['nmap', '-sT', '-sV', '--open', '--script', 'vulners', '-p', NMAP_PORTS, host]
-    print(f"[NMAP] Scanning ports...")
+    # Step 1: Fast port discovery with Naabu
+    print(f"[NAABU] Fast port discovery...")
+    naabu_ports = _run_naabu(host, top_ports=1000, rate=1000)
+    
+    if naabu_ports:
+        ports_to_scan = ','.join(naabu_ports[:100])
+        print(f"[NAABU] ✅ Found {len(naabu_ports)} open ports (scanning top 100)")
+    else:
+        ports_to_scan = NMAP_PORTS
+        print(f"[NAABU] ⚠️  Fallback to default ports")
+    
+    # Step 2: Targeted Nmap scan on discovered ports
+    nmap_command = ['nmap', '-sT', '-sV', '--open', '--script', 'vulners', '-p', ports_to_scan, host]
+    print(f"[NMAP] Scanning {ports_to_scan.count(',') + 1} ports with service detection...")
     nmap_output = AICore.run_command(nmap_command)
     
     if not nmap_output:
@@ -226,20 +276,20 @@ def execute_service_recon_and_vuln_scan(target, simulator_mode=False):
     services = _parse_nmap_output(nmap_output)
     print(f"[NMAP] ✅ Found {len(services)} services\n")
     
-    # Step 2: Extract and FILTER CVEs
+    # Step 3: Extract and FILTER CVEs
     all_cves = _extract_cves_from_nmap(nmap_output)
     critical_cves = _filter_critical_cves(all_cves, max_cves=5)
     
     if len(all_cves) > len(critical_cves):
         print(f"[CVE_FILTER] Filtered {len(all_cves)} CVEs → {len(critical_cves)} critical ones")
     
-    # Step 3: Cleanup old clones
+    # Step 4: Cleanup old clones
     clone_dir = os.path.join("Recon", "git_clones")
     if os.path.exists(clone_dir):
         shutil.rmtree(clone_dir)
     os.makedirs(clone_dir, exist_ok=True)
     
-    # Step 4: Find POCs for each service
+    # Step 5: Find POCs for each service
     for service in services:
         port = service.get('port', '80').split('/')[0]
         service_name = service.get("service", "").lower()
@@ -250,13 +300,26 @@ def execute_service_recon_and_vuln_scan(target, simulator_mode=False):
         if not is_http or version_info == 'N/A':
             continue
         
+        # HTTP fingerprinting with redirect following
+        scheme = 'https' if port in ['443', '8443'] else 'http'
+        url = f"{scheme}://{host}:{port}"
+        try:
+            final_url, redirect_chain = _get_final_url(url, timeout=5)
+            if len(redirect_chain) > 1:
+                service['redirect_info'] = {
+                    'final_url': final_url,
+                    'redirect_count': len(redirect_chain) - 1
+                }
+        except Exception:
+            pass
+        
         print(f"\n{'─'*60}")
         print(f"🎯 {service_name} {version_info} on port {port}")
         print(f"{'─'*60}")
         
         service["pocs_found"] = []
         
-        # Step 4a: PARALLEL PacketStorm lookup (MUCH FASTER)
+        # Step 5a: PARALLEL PacketStorm lookup (MUCH FASTER)
         if critical_cves:
             print(f"[PACKETSTORM] Checking {len(critical_cves)} critical CVEs in parallel...")
             with ThreadPoolExecutor(max_workers=3) as executor:
@@ -266,7 +329,7 @@ def execute_service_recon_and_vuln_scan(target, simulator_mode=False):
                     pocs = future.result()
                     service["pocs_found"].extend(pocs)
         
-        # Step 4b: GitHub API Search
+        # Step 5b: GitHub API Search
         if GITHUB_API_TOKEN:
             github_results = _search_github_api(service_name, version_info)
             
@@ -285,7 +348,7 @@ def execute_service_recon_and_vuln_scan(target, simulator_mode=False):
         
         print(f"\n✅ Found {len(service['pocs_found'])} relevant POCs for this service")
     
-    # Step 5: Cleanup
+    # Step 6: Cleanup
     if os.path.exists(clone_dir):
         print(f"\n[CLEANUP] Removing cloned repos...")
         shutil.rmtree(clone_dir)
