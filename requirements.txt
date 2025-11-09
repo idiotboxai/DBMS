@@ -1,0 +1,16 @@
+# Python dependencies for DBMS Security Scanning System
+
+# Core dependencies
+requests>=2.31.0
+PyYAML>=6.0.1
+beautifulsoup4>=4.12.0
+
+# Optional but recommended
+lxml>=4.9.3
+
+# Note: The following tools should be installed separately:
+# - nmap (sudo apt-get install nmap)
+# - gobuster (go install github.com/OJ/gobuster/v3@latest)
+# - nuclei (go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest)
+# - naabu (go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest)
+# - tor (sudo apt-get install tor)
