@@ -6,9 +6,15 @@ Web crawler for discovering endpoints and parameters.
 import requests
 from urllib.parse import urljoin, urlparse, parse_qs
 from typing import Set, List, Dict, Optional
-from bs4 import BeautifulSoup
 from ai_core import get_with_retry
 from config import REQUEST_USER_AGENT
+
+try:
+    from bs4 import BeautifulSoup
+    BS4_AVAILABLE = True
+except ImportError:
+    BS4_AVAILABLE = False
+    print("[WARNING] BeautifulSoup4 not installed. Install with: pip install beautifulsoup4")
 
 
 class WebCrawler:
@@ -38,6 +44,14 @@ class WebCrawler:
         Returns:
             Dictionary with discovered data
         """
+        if not BS4_AVAILABLE:
+            print(f"\n[CRAWLER] ❌ BeautifulSoup4 not available. Cannot crawl.")
+            return {
+                'urls': [],
+                'parameters': [],
+                'forms': []
+            }
+            
         print(f"\n[CRAWLER] Starting crawl of {self.base_url}")
         
         self._crawl_recursive(self.base_url, 0)
